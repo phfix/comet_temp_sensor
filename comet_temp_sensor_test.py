@@ -12,17 +12,6 @@ try:
     r= s.getSelectedData([0,1,2,3])
     print(r)
 
-"""
-    # More examples
-    print("int:",s.getInt(0x9C40))
-    print("int32:",s.getInt32(0x9C68))
-    print("float", s.getFloat(0x9C78 ))
-    r=s.getReadings(0)
-    r=s.getReadings(1)
-    r=s.getReadings(2)
-    r=s.getReadings(3)
-    print(r)
-""""
 
 except  socket.error as e:
     print("Sensor communication error: ",e, s.ip)
@@ -30,4 +19,18 @@ else:
     pass
 finally:
     s.close()
+
+
+
+# More examples
+# print("int:",s.getInt(0x9C40))
+# print("int32:",s.getInt32(0x9C68))
+# print("float", s.getFloat(0x9C78 ))
+# r=s.getReadings(0)
+# r=s.getReadings(1)
+# r=s.getReadings(2)
+# r=s.getReadings(3)
+# print(r)
+
+
 

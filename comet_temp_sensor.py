@@ -12,6 +12,8 @@ def getaddr(ch,offset,size):
             return 0x9C40+offset+ch*size
 
 def getErrorMessage(code):
+    if code==0:
+        return "Ok"
     messages= {
         1 :"A/D converter for measurement from Pt1000 probes is under lower limit. It is likely that temperature probe is shorted.",
         2 :"A/D converter for measurement from Pt1000 probes is above high limit. It is likely that temperature probe is not connected, or cable is damaged.",
@@ -35,8 +37,6 @@ def getErrorMessage(code):
         53 :"Value is not available. This error is shown at disabled channels or when value was not measured yet. CO2 concentration is available 15 sec after device start-up.",
         55 :"This error is related to values transferred via Modbus TCP. It signalises overflow of Modbus register.",
     }
-    if code==0:
-        return "Ok"
     if code in  messages:
         return "E" + str(code) +": " + messages[code]
     
