@@ -1,0 +1,20 @@
+{
+"JsonType":2,
+"JsonVersion":1,
+"OrderId":191,
+"MsgType":2,
+"MsgCache":0,
+"Sn":"18280001",
+"Desc":"This is a name of Wifi sensor",
+"Kind":1,
+"AState":{"Reg":131,"Mask":14819},
+"NConf":27,
+"ConfID":"1-266C9026-1FFC",
+"Interval":10,
+"Time":{"Now":"2020-07-02T09:58:20+02:00","Sample":"2020-07-02T09:58:20+02:00","IsValid":1},
+"Rssi":{"Now":-33,"Sample":-33},
+"LocalIP":"192.168.236.15",
+"Channels":[
+{"Nr":1,"En":1,"Quant":"Temperature","Val":"FF810002","ValStr":"Error2","Unit":"..C","Dec":1,"Alarm":[1,0],"AlarmLim":["41D80000","41F00000"],"AlarmMode":[1,0]}
+]
+}

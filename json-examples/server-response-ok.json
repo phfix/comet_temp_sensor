@@ -1,0 +1,5 @@
+HTTP/1.1 200 OK
+Date: Thu, 02 Jul 2020 08:04:30 GMT
+Content-length: 75
+
+{"Result":true,"Message":"All is OK. Message was successfully processed."}

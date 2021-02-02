@@ -1,0 +1,192 @@
+---------------------------------------------------------------------------------------------------
+
+ ModbusTCP registers (W0710, W0741, W3710, W3711, W3721, W7710, W4710, W5714, W0711)
+
+ standard ModbusTCP port: 502
+
+ v1.0 for firmware 10-0-0-6, 2020-07-01
+ ModbusTCP specification is free available: http://modbus.org/specs.php
+
+---------------------------------------------------------------------------------------------------
+
+
+List of supported Modbus commands
+---------------------------------------------------------------------------------------------------
+
+|----------------------------------------------------|--------|-----------------------------------|
+| Command                                            | Code   | Description                       |
+|                                                    | [HEX]  |                                   |
+|----------------------------------------------------|--------|-----------------------------------|
+| Read Holding Register(s)                           | 0x03   | Reads 16 bit register(s)          |
+|----------------------------------------------------|--------|-----------------------------------|
+| Read Input Register(s)                             | 0x04   | Reads 16 bit register(s)          |
+|----------------------------------------------------|--------|-----------------------------------|
+
+
+Device identification
+---------------------------------------------------------------------------------------------------
+
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| Variable                         | Adr.   | Adr.   | Nr.    | Type   | Description              |
+|                                  | [HEX]  | [DEC]  |        | *)     |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| serial number                    | 0x9C22 | 39970  | 1      | BCD    | 1st two digits of s/n    |
+|                                  | 0x9C23 | 39971  | 1      | BCD    | 2nd two digits of s/n    |
+|                                  | 0x9C24 | 39972  | 1      | BCD    | 3rd two digits of s/n    |
+|                                  | 0x9C25 | 39973  | 1      | BCD    | 4th two digits of s/n    |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| device type                      | 0x9C26 | 39974  | 1      | HEX    | 0x0001 ... W0710         |
+|                                  |        |        |        |        | 0x0002 ... W0741         |
+|                                  |        |        |        |        | 0x0003 ... W3710         |
+|                                  |        |        |        |        | 0x0004 ... W3711         |
+|                                  |        |        |        |        | 0x0005 ... W3721         |
+|                                  |        |        |        |        | 0x0007 ... W7710         |
+|                                  |        |        |        |        | 0x0008 ... W4710         |
+|                                  |        |        |        |        | 0x0009 ... W5714         |
+|                                  |        |        |        |        | 0x000B ... W0711         |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+
+
+Device states
+---------------------------------------------------------------------------------------------------
+
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| Variable                         | Adr.   | Adr.   | Nr.    | Type   | Description              |
+|                                  | [HEX]  | [DEC]  |        | *)     |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| internal acoustic signalisation  | 0x9C27 | 39975  | 1      | INT    | 1 ... active             |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| optical LED signalisation        | 0x9C28 | 39976  | 1      | INT    | 1 ... active             |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| RSSI value                       | 0x9C29 | 39977  | 1      | INT    | range -30dBm to -99dBm   |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| configuration error              | 0x9C2A | 39978  | 1      | INT    | 1 ... config. error      |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| system alarm - measurement error | 0x9C2B | 39979  | 1      | INT    | 1 ... measurement error  |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| low voltage of RTC battery       | 0x9C2C | 39980  | 1      | INT    | 1 ... battery error      |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+
+
+Measured values
+---------------------------------------------------------------------------------------------------
+
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| Variable                         | Adr.   | Adr.   | Nr.    | Type   | Description              |
+|                                  | [HEX]  | [DEC]  |        | *)     |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| measured value at channel 1      | 0x9C40 | 40000  | 1      | INT*X  | 16bit register in format |
+|                                  |        |        |        |        | INT*X - see table **);   |
+|               ....               |  ....  |  ....  |        |        | error value <= -32000    |
+|                                  |        |        |        |        |                          |
+| measured value at channel 8      | 0x9C47 | 40007  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| state of alarm 1 at channel 1    | 0x9C48 | 40008  | 1      | INT    | 0 ... alarm inactive     |
+|                                  |        |        |        |        | 1 ... alarm active       |
+|               ....               |  ....  |  ....  |        |        |                          |
+|                                  |        |        |        |        |                          |
+| state of alarm 1 at channel 8    | 0x9C4F | 40015  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| state of alarm 2 at channel 1    | 0x9C50 | 40016  | 1      | INT    | 0 ... alarm inactive     |
+|                                  |        |        |        |        | 1 ... alarm active       |
+|               ....               |  ....  |  ....  |        |        |                          |
+|                                  |        |        |        |        |                          |
+| state of alarm 2 at channel 8    | 0x9C57 | 40023  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| unit for channel 1               | 0x9C58 | 40024  | 1      | STR    | first two characters     |
+|                                  |        |        |        |        | from channel unit        |
+|               ....               |  ....  |  ....  |        |        |                          |
+|                                  |        |        |        |        |                          |
+| unit for channel 8               | 0x9C5F | 40031  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| number of decimal places for ch1 | 0x9C60 | 40032  | 1      | INT    | number of decimal places |
+|                                  |        |        |        |        | for value in format      |
+|               ....               |  ....  |  ....  |        |        | INT*X - see table **)    |
+|                                  |        |        |        |        |                          |
+| number of decimal places for ch8 | 0x9C67 | 40039  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| measured value at channel 1      | 0x9C68 | 40040  | 2      | 32b    | 32bit measured value     |
+|                                  |        |        |        | INT*   | at format INT*(X+2);     |
+|               ....               |  ....  |  ....  |        | (X+2)  | MSByte at first reg.;    |
+|                                  |        |        |        |        | error <= -320000000      |
+| measured value at channel 8      | 0x9C77 | 40055  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| measured value at channel 1      | 0x9C78 | 40056  | 2      | IEEE   | 32b float IEEE754 value; |
+|                                  |        |        |        | 754    | LSByte at first reg.     |
+|               ....               |  ....  |  ....  |        | FLOAT  |                          |
+|                                  |        |        |        |        |                          |
+| measured value at channel 8      | 0x9C87 | 40071  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| min. value for channel 1         | 0x9C88 | 40072  | 1      | INT*X  | 16bit register in format |
+|                                  |        |        |        |        | INT*X - see table **);   |
+|               ....               |  ....  |  ....  |        |        | error value <= -32000    |
+|                                  |        |        |        |        |                          |
+| min. value for channel 8         | 0x9C8F | 40079  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+| max. value for channel 1         | 0x9C90 | 40080  | 1      | INT*X  | 16bit register in format |
+|                                  |        |        |        |        | INT*X - see table **);   |
+|               ....               |  ....  |  ....  |        |        | error value <= -32000    |
+|                                  |        |        |        |        |                          |
+| max. value at channel 8          | 0x9C97 | 40087  |        |        |                          |
+|----------------------------------|--------|--------|--------|--------|--------------------------|
+
+
+Notice
+---------------------------------------------------------------------------------------------------
+
+ In table are stated addresses of the Modbus registers (Adr.). Modbus register
+ number is plus one than address of register (e.g. register with number 0x9C41
+ have the Modbus address 0x9C40). Inside Modbus TCP frames are physically
+ send address.
+
+
+*)  Type:
+
+    BCD ......... register is in BCD format (16bit)
+    HEX ......... number in HEX format (16bit)
+    INT ......... register is a signed 16bit integer at range at range -32768 to 32767
+    INT*X ....... register is a signed 16bit integer. From the reason to increase resolution
+                  of transmitted value, is measured value multiplied by value X. Number of decimal 
+                  places can be obtained from registers 40032 - 40039 or from the table below **). 
+                  For example if number of decimal places is 1 then temperature value 238 from 
+                  register can be translated to 23.8°C. Error values are transmitted as number 
+                  lower then -32000 (e.g. -32005 = Error 5).
+    STR ......... two bytes text via one 16bit Modbus register
+    INT*(X+2) ... 32bit measured value with increased resolution by 2. Value is transmitted
+                  via two 16bit Modbus registers. Most significat part of number is transmitted
+                  first (e.g. value 22.825 = reg1: 0, reg2: 22825). Error values are transmitted 
+                  as numbers lower then -320000000 (e.g -320000011 = Error 11).
+    IEEE 754 .... value is a 32bit IEEE 754 float value transmitted via two Modbus registers.
+                  Value 22.704 is transmited like a reg1: 0xA317 and reg2: 0x41B5.
+
+
+**) Table of decimal places for INT*X:
+
+|----------------------------------|----------------|--------------|------------------------------|
+| Measured value                   | Number of dec. | Unit         | Exanmple                     |
+|                                  | places (mult)  |              |                              |
+|----------------------------------|----------------|--------------|------------------------------|
+| Temperature                      | 1 (*10)        | [°C] or [°F] | 125   = 12.5°C               |
+|----------------------------------|----------------|--------------|------------------------------|
+| Relative humidity                | 1 (*10)        | [%RH]        | 801   = 80.1%RH              |
+|----------------------------------|----------------|--------------|------------------------------|
+| Dew pont                         | 1 (*10)        | [°C] or [°F] | 93    = 9.3°C                |
+| Absolute humidity                |                | [g/m^3]      | 85    = 8.5g/m^3             |
+| Specific humidity                |                | [g/kg]       | 76    = 7.6g/kg              |
+| Mixing ratio                     |                | [g/kg]       | 78    = 7.8g/kg              |
+| Specific enthalpy                |                | [kJ/kg]      | 445   = 44.5kJ/kg            |
+| Humidex (at °C)                  |                |              | 258   = 25.8                 |
+|----------------------------------|----------------|--------------|------------------------------|
+| Barometric pressure              |                |              |                              |
+|                                  | 1 (*10)        | [hPa]        | 10117 = 1011.7hPa            |
+|                                  | 2 (*100)       | [kPa]        | 10117 = 101.17kPa            |
+|                                  | 1 (*10)        | [mBar]       | 10118 = 1011.8mBar           |
+|                                  | 1 (*10)        | [mmHg]       | 7588  = 758.8mmHg            |
+|                                  | 2 (*100)       | [inHg]       | 2988  = 29.88inHg            |
+|                                  | 1 (*10)        | [inH2O]      | 4062  = 406.2inH2O           |
+|                                  | 3 (*1000)      | [PSI]        | 14675 = 14.675PSI            |
+|                                  | 1 (*10)        | [oz/in^2]    | 2348  = 234.8oz/in^2         |
+|----------------------------------|----------------|--------------|------------------------------|
+| CO2 level                        | 0              | [ppm]        | 890   = 890ppm               |
+|----------------------------------|----------------|--------------|------------------------------|
+

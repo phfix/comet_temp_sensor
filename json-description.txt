@@ -1,0 +1,316 @@
+-----------------------------------------------------------------------------------------------------------------------
+
+ Description of JSON messages (W0710, W0741, W3710, W3711, W3721, W7710, W4710, W5714, W0711)
+
+ v1.0 for firmware 10-0-0-6, 2020-07-02
+
+-----------------------------------------------------------------------------------------------------------------------
+
+1.  History of changes
+
+    |-----------------------|--------------------|--------------------------------------------------------------------|
+    | Date                  | Version            | Description of changes                                             |
+    |                       |                    |                                                                    |
+    |-----------------------|--------------------|--------------------------------------------------------------------|
+    | 2020-07-03            |  v1                | Initial version of specification                                   |
+    |-----------------------|--------------------|--------------------------------------------------------------------|
+
+
+2.  JSON message structure and parameters
+
+2.1 Description
+
+    Measured values are send via HTTP POST with JSON data content. Structure of JSON message is described at chapter 
+    2.2. Each message need to be confirmed by response described at chapter 2.4. In case of message is not confirmed
+    from the server side, then message is not marked as successfully sent. And when memory (cache) feature is not
+    deactivated, message is re-send again at next connection. Messages from memory (cache) are send first. Size of
+    memory (cache) is around 900 messages and is cleared after changing device setup.
+
+    Device uses HTTP 1.1 transfer. That means via one TCP conenction can be sent multiple POST requests (multile JSON
+    messages). In case of server is not capable to properly serve this behaviour, memory (cache) feature need to be
+    deactivated. Responses without chunked transfer encoding are expected (that means messages with proper header
+    Content-Length are expected).
+    
+    Device supports HTTP and HTTPs JSON message. In case of client side authetication is required, this can be done
+    via COMET root certificate (CA file COMET System CA is available at the support request).
+
+
+2.2 Message structure
+
+    {
+      <JsonType>,
+      <JsonVersion>,
+      <OrderId>,
+      <MsgType>,
+      <MsgCache>,
+      <Sn>,
+      <Desc>,
+      <Kind>,
+      <AState>,
+      <NConf>,
+      <ConfID>,
+      <Interval>,
+      <Time>,
+      <Rssi>,
+      <LocalIP>,
+      <Channels>
+    }
+
+    <AState>:
+    {
+      <Reg>,
+      <Mask>
+    }
+
+    <Time>:
+    {
+      <Now>,
+      <Sample>,
+      <IsValid>
+    }
+
+    <Rssi>:
+    {
+      <Now>,
+      <Sample>
+    }
+
+    <Channels>:
+    [
+      {
+        <Nr>,
+        <En>,
+        <Quant>,
+        <Val>,
+        <ValStr>,
+        <Unit>,
+        <Dec>,
+        <Alarm>:[<_Al1>,<_Al2>],
+        <AlarmLim>:[<_AlLim1>,<_AlLim2>],
+        <AlarmMode>:[<_AlMode1>,<_AlMode2>]
+      },
+      {
+        <Nr>,
+        <En>,
+        <Quant>,
+        <Val>,
+        <ValStr>,
+        <Unit>,
+        <Dec>,
+        <Alarm>:[<_Al1>,<_Al2>],
+        <AlarmLim>:[<_AlLim1>,<_AlLim2>],
+        <AlarmMode>:[<_AlMode1>,<_AlMode2>]
+      },
+
+      ...
+      ...
+
+    ]
+
+
+2.3 Message parameters
+
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | Parameter             | Type   | Range     | Description                                                        |
+    |                       |        |           |                                                                    |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <JsonType>            | INT    |           | Type of the JSON message. For a Wifi sensors is set to 2.          |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <JsonVersion>         | INT    |           | Version of JSON message. At present time is set to 1.              |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <OrderId>             | INT    | 0 - 32bit | Order number of message from device restart.                       |
+    |                       |        | unsigned  | First message is set to 0.                                         |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <MsgType>             | INT    | 0 - 4     | Message type:                                                      |
+    |                       |        |           |   0 = first message after restart                                  |
+    |                       |        |           |   1 = first message after changing configuration                   |
+    |                       |        |           |   2 = synchronous message (message sent at set interval)           |
+    |                       |        |           |   3 = asynchronous message (e.g. message at alarm)                 |
+    |                       |        |           |   4 = testing message                                              |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <MsgCache>            | INT    | 0 - 7     | Reason code in conjunction with JSON cache/non-volatale memory:    |
+    |                       |        |           |   0 = direct message without using cache                           |
+    |                       |        |           |   1 = sent from cache (NO_WLAN)                                    |
+    |                       |        |           |   2 = sent from cache (DNS_ERR)                                    |
+    |                       |        |           |   3 = sent from cache (SOCK_ERR)                                   |
+    |                       |        |           |   4 = sent from cache (CONNECTION_ERR)                             |
+    |                       |        |           |   5 = sent from cache (TRANSFER_ERR)                               |
+    |                       |        |           |   6 = sent from cache (RESULT_NO)                                  |
+    |                       |        |           |   7 = sent from cache (RESULT_CONFIRM)                             |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Sn>                  | STR    | 8B len    | Serial number of the device (e.g. 20286614)                        |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Desc>                | STR    | 64B len   | Device name at UTF-8                                               |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Kind>                | INT    | 0 - 11    | Identification of device type:                                     |
+    |                       |        |           |  |----|-------|------------|---------------------------------------|
+    |                       |        |           |  | 1  | W0710 | T          | 1xPt1000 ext (incl)                   |
+    |                       |        |           |  | 2  | W0741 | T          | 4xPt1000 ext                          |
+    |                       |        |           |  | 3  | W3710 | T+RH       | 1xDigi ext (incl)                     |
+    |                       |        |           |  | 4  | W3711 | T+RH       | 1xDigi ext                            |
+    |                       |        |           |  | 5  | W3721 | T+RH       | 2xDigi ext                            |
+    |                       |        |           |  | 7  | W7710 | T+RH+P     | 1xDigi ext + P int (incl)             |
+    |                       |        |           |  | 8  | W4710 | T+RH+P+CO2 | 1xDigi ext + P int + CO2 int (incl)   |
+    |                       |        |           |  | 9  | W5714 | CO2        | CO2 int                               |
+    |                       |        |           |  | 11 | W0711 | T          | 1xPt1000 ext                          |
+    |-----------------------|--------|-----------|--|----|-------|------------|---------------------------------------|
+    | <AState>              |        |           | AState status register. Aditional description at chapter 5.        |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Reg>              | INT    | 0 - 65535 | Value of AState register at the moment when request was created    |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Mask>             | INT    | 0 - 65535 | Mask of active bites at AState register                            |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <NConf>               | INT    | 0 - 255   | Configuration number                                               |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <ConfID>              | STR    | 15B len   | Configuration unique ID (X-YYYYYYYY-ZZZZ)                          |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Interval>            | INT    | 0 - 65535 | Sending interval in [sec]                                          |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Time>                |        |           | Date and time                                                      |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Now>              | STR    | RFC3339   | Time when message was transmitted to server                        |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Sample>           | STR    | RFC3339   | Time when message was sampled (it can be older then <Now> due to   |
+    |  |                    |        |           | sending message from cache)                                        |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<IsValid>          | INT    | 0, 1      | Indication if time is valid (1 = RTC time is valid)                |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Rssi>                |        |           | RSSI (Received signal strength indication at [dBm]). In case of    |
+    |  |                    |        |           | value is not available is returned -99. Expected range for Wifi    |
+    |  |                    |        |           | is about -30 to -99dBm.                                            |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Now>              | INT    | < 0       | RSSI value at the time when message is transmitted to server       |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Sample>           | INT    | < 0       | RSSI value at the time when message was sampled                    |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <LocalIP>             | STR    | 64B len   | IP address of the device at local network                          |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Channels>            |        |           | Measured values at channels. In case of channel is not available   |
+    |  |                    |        |           | at the device, channel is not shown.                               |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Nr>               | INT    | 1 - 8     | Channel number                                                     |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<En>               | INT    | 0, 1      | Channel is enabled at settings (1 = enabled)                       |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Quant>            | STR    | 32B len   | Name of the channel at UTF-8                                       |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Val>              | STR    | 32B len   | Measured value at float format transmitted via HEX characters      |
+    |  |                    |        |           | (FF8100NN = error number NN)                                       |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<ValStr>           | STR    | 32B len   | Measured value at string format (e.g. 12.8, n/a, Error X)          |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Unit>             | STR    | 16B len   | Unit of the channel at UTF-8                                       |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Dec>              | INT    | 0 - 10    | Number of decimal places                                           |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<Alarm>            |        |           | Alarm state (1 = alarm)                                            |
+    |  |  |                 |--------|-----------|--------------------------------------------------------------------|
+    |  |  |-<_Al1>          | INT    | 0, 1      | Alarm 1 at channel                                                 |
+    |  |  |                 |--------|-----------|--------------------------------------------------------------------|
+    |  |  |-<_Al2>          | INT    | 0, 1      | Alarm 2 at channel                                                 |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<AlarmLim>         |        |           | Alarm limit at float format transmitted via HEX characters         |
+    |  |  |                 |--------|-----------|--------------------------------------------------------------------|
+    |  |  |-<_AlLim1>       | STR    | 32B len   | Alarm 1 limit for channel                                          |
+    |  |  |                 |--------|-----------|--------------------------------------------------------------------|
+    |  |  |-<_AlLim2>       | STR    | 32B len   | Alarm 2 limit for channel                                          |
+    |  |                    |--------|-----------|--------------------------------------------------------------------|
+    |  |-<AlarmMode>        |        |           | Alarm mode:                                                        |
+    |     |                 |        |           |   0 = alarm disabled                                               |
+    |     |                 |        |           |   1 = lower than limit                                             |
+    |     |                 |        |           |   2 = higher than limit                                            |
+    |     |                 |--------|-----------|--------------------------------------------------------------------|
+    |     |-<_AlMode1>      | INT    | 0 - 2     | Alarm 1 mode                                                       |
+    |     |                 |--------|-----------|--------------------------------------------------------------------|
+    |     |-<_AlMode2>      | INT    | 0 - 2     | Alarm 2 mode                                                       |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+
+
+2.4 Message response
+
+    {
+      <Result>,
+      <Message>
+    }
+
+
+2.5 Response parameters
+
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | Parameter             | Type   | Range     | Description                                                        |
+    |                       |        |           |                                                                    |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Result>              | BOOL   |           | Response whether incoming message was successfully processed by    |
+    |                       |        |           | the server. In case of server response is true, message is marked  |
+    |                       |        |           | as successfully sent and message is removed from cache (if cache   |
+    |                       |        |           | feature is not deactivated).                                       |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+    | <Message>             | STR    | 100B len  | Optional text message from server. This text message can be shown  |
+    |                       |        |           | at diagnostic log (text message cannot contain character ").       |
+    |-----------------------|--------|-----------|--------------------------------------------------------------------|
+
+
+3.  JSON Messages examples
+
+    Examples of JSON messages and server responses you find at directory "json-examples".
+
+
+4.  Code examples
+
+    Directory "code-examples" contains examples how to obtain values via different programming languages. Current
+    version of SDK contains example at python language only.
+
+
+5.  AState registers
+
+5.1 Current states of AState register
+
+    JSON field <AState>-<Reg> contains bits with device state at moment when measured values was sampled. 
+    Time of sampling values may to differ than time when message is transferred to server.
+
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | Bit           | Description                                                                                     |
+    |               |                                                                                                 |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit0 - bit1   | RSSI level indicator (0 = poor signal, 1 = sufficient, 2 = good, 3 = excellent)                 |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit2 - bit4   | Unused                                                                                          |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit5          | WLAN co-processor error (=1)                                                                    |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit6          | Internal hardware error (1 = Internal hardware error - RTC, EEPROM, LCD)                        |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit7          | Device properly connected into Wifi (=1)                                                        |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit8          | Optical LED active (=1)                                                                         |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit9          | Acoustic active (=1)                                                                            |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit10         | Unused                                                                                          |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit11         | RTC time may not be valid - low voltage detected at RTC (=1)                                    |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit12         | Measurement error at one of channels (=1)                                                       |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit13         | Configuration is not valid - configration error (=1)                                            |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit14 - bit15 | Unused                                                                                          |
+    |---------------|-------------------------------------------------------------------------------------------------|
+
+
+5.2 Mask of active bits at AState
+
+    Some bits at AState register can be deactivated at the configuration. Table below shows these bits. Other bits are
+    unused.
+    
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | Bit           | Description                                                                                     |
+    |               |                                                                                                 |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit8          | Optical signalisation is enabled inside the configuration (=1)                                  |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit9          | Acoustic is enabled inside the configuration (=1)                                               |
+    |---------------|-------------------------------------------------------------------------------------------------|
+    | bit12         | Enabled feature alarm on measurement error (=1)                                                 |
+    |---------------|-------------------------------------------------------------------------------------------------|
+
