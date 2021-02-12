@@ -113,8 +113,9 @@ class Sensor:
         #read ModbusTCP response
         rcv = self.sock.recv(64)
         #decode response
-        out = struct.unpack(">IHcccf", rcv)
-        return out[5]
+        original=bytearray(rcv[-4:])
+        original[0::2], original[1::2] = original[1::2], original[0::2]
+        return struct.unpack('<f',original)
 
     def getErrorCode(self,value):
         r= value
