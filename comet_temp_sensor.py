@@ -115,7 +115,7 @@ class Sensor:
         #decode response
         original=bytearray(rcv[-4:])
         original[0::2], original[1::2] = original[1::2], original[0::2]
-        return struct.unpack('<f',original)
+        return struct.unpack('<f',original)[0]
 
     def getErrorCode(self,value):
         r= value
@@ -147,7 +147,6 @@ class Sensor:
             d= {}
             addr=self.channelsstart[ch]
             d["name"] = self.getName(ch)
-            d["time"] = datetime.now()
             d["value"]= self.getInt(addr+0)
             d["valuef"]=self.getFloat(getaddr(ch,56,2))
             d["errorcode"]=self.getErrorCode(d["value"])

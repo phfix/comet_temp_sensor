@@ -1,5 +1,6 @@
 import socket
 from comet_temp_sensor import Sensor
+import json
 
 s = Sensor('192.168.3.1',["Top1","Bot1","Top2","Bot2"])
 
@@ -10,7 +11,8 @@ try:
     print("Serial", snr)
    
     r= s.getSelectedData([0,1,2,3])
-    print(r)
+    data = json.dumps(r,indent = 4)
+    print(data)
 
 
 except  socket.error as e:
