@@ -7,16 +7,16 @@ import time
 #resistance in Ohms.
 
 expects= [
-    (r"E\d","error"),
+    (r"(?P<input>[ABD])\s*E.\s*(?P<error>\d?)","error"),
     (r"(?P<status>[PRUZ])(?P<code>\d)","status"),
-    (r"(?P<input>[ABD])\s*(?P<value>\d*\.\d+)(?P<unit>[KCFR])(?P<channel>\d\d)*","temp")
+    (r"(?P<input>[ABD])(?P<sign>-*)\s*(?P<value>\d*\.\d+)(?P<unit>[KCFR])(?P<channel>\d\d)*","temp")
 ]
 
 class F250:
     def __init__(self, port):
         self.portname = port
         self.current_output=""
-        self.display=True
+        self.display=False
         self.re_strings=[]
         for e in expects:
             self.re_strings.append(e[0])
@@ -42,11 +42,22 @@ class F250:
             followed by up to 2 single digit parameters, with the exception of the switchbox commands which have 2
             alphabetical characters followed by 2 digits. 
         """
-        self.port.write(command+"\n")
+        self.port.write((command+"\n").encode("utf8"))
         
-    def send_command_expect_response(self,command):
+    def send_command_expect_response(self,command,responses):
+
         self.send_command(command)
-        return self.expect()
+
+        response=self.expect()
+        #while True:
+        #    index,re= response
+        #    if index<0:
+        #        break 
+        #    _,response_type= expects[index]
+        #    if response_type in response:
+        #        return response
+        #    response=self.expect()
+
 
     def receive(self):
         """ All data returned is terminated with a carriage return/line (CR LF) feed sequence
@@ -96,7 +107,7 @@ class F250:
                 # avoids paramiko hang when recv is not ready yet
                 while time.time() < (base_time + timeout):
                     # Read some of the output
-                    current_buffer =  self.port.read_until()
+                    current_buffer =  self.port.read_until().decode('utf8')
                     if "\n" in current_buffer:
                         break
 
@@ -127,6 +138,51 @@ class F250:
                 return (re_index,found_pattern)
 
             return (-1,"Not expected")
+
+    def read_response(self,timeout,store):
+        read_more=True
+        while read_more:
+            index,match_string=self.expect()
+            match_string=str(match_string)
+            if index<0:
+                #print("expect timout?",command)
+               # response["Timeout"]=index
+                return (-1,"Not expected")
+            m,action=expects[index]
+            #print("-->\n","RESPONSE", index, action, m, match_string)
+            if action == "error":
+                match=re.search(expects[index][0],match_string,re.MULTILINE)
+                if match:
+                    #response["input"]=str(match.group('input'))
+                    #response["errorcode"]=str(match.group('code'))
+                    print("Error received:",str(match.group('input')),int(match.group('errorcode')))
+            if action == "status":
+                match=re.search(expects[index][0],match_string,re.MULTILINE)
+                if match:
+                    #status=str(match.group('status'))
+                    #response[status]=int(match.group('code'))
+                    print("Status received:",str(match.group('status')),int(match.group('code')))
+            if action == "temp":
+                match=re.search(expects[index][0],match_string,re.MULTILINE)
+                if match:
+                    sign=1
+                    reading=match.groupdict()
+                    if "sign" in reading and reading["sign"]=="-":
+                        sign=-1
+                    temp=float(reading["value"])
+                    temp*= sign
+                    input= str(reading["input"])
+                    print("Temp reading", input,temp)
+                    #skip info about unit, and switchbox channels
+                    d={}
+                    d["name"]="FK250/" + input
+                    d["valuef"]=temp
+                    d["errorcode"]=""
+                    store(d)
+                
+
+        return (-1,"Not expected")
+                
         
     def setup(self):
         """
@@ -151,9 +207,9 @@ class F250:
         """
 
         #verfiy contact
-        self.send_command_expect_response("?Z")
-        # cleare Z
-        self.send_command("Z")
+        self.send_command_expect_response("?Z",["status"])
+        # cleare Z ?
+        #self.send_command("Z") #Toggles the Z function. dont use
         
         # Send "R1"  for high resolution
         self.send_command("R1")
@@ -180,6 +236,7 @@ class F250:
         E9 Conversion table too big (more than 395 points)/ Resistance range too great
         E10 Unable to create resistance/temperature conversion table.
         E11 Unable to create resistance/temperature conversion table. 
+          Received: BE- 1  
         """
         pass
 
@@ -191,4 +248,4 @@ if __name__ == "__main__":
     device.setup()
     for x in range(100):
         r=device.expect()
-        print(r)
+        #print(r)
