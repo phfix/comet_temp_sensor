@@ -12,6 +12,7 @@ expects= [
     (r"(?P<input>[ABD])(?P<sign>-*)\s*(?P<value>\d*\.\d+)(?P<unit>[KCFR])(?P<channel>\d\d)*","temp")
 ]
 
+
 class F250:
     def __init__(self, port):
         self.portname = port
@@ -34,6 +35,8 @@ class F250:
         self.port=serial.Serial(port=self.portname, baudrate=19200, timeout=10,parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO, bytesize=serial.EIGHTBITS)
         pass
 
+    def disconnect(self):
+        self.port.close()
 
     def send_command(self,command):
         """ All commansds must be delimited with a line feed character (ASCII 0AH), that is the last character of a
@@ -44,11 +47,11 @@ class F250:
         """
         self.port.write((command+"\n").encode("utf8"))
         
-    def send_command_expect_response(self,command,responses):
+    def send_command_expect_response(self,command,responses, timeout, keep_running):
 
         self.send_command(command)
 
-        response=self.expect()
+        response=self.expect(timeout=timeout, keep_running=keep_running)
         #while True:
         #    index,re= response
         #    if index<0:
@@ -75,7 +78,7 @@ class F250:
         
         return self.port.read_until() #expected=LF
 
-    def expect( self, timeout=60 ):
+    def expect( self, timeout,keep_running ):
             current_buffer_output = self.current_output
             # This function needs all regular expressions to be in the form of a
             # list, so if the user provided a string, let's convert it to a 1
@@ -92,7 +95,7 @@ class F250:
             wait=True
             match=None
             re_index=-1
-            while wait:
+            while wait and keep_running():
                 # check current buffer conted
                 for re_index,re_string in enumerate(self.re_strings):
                     match=re.search( re_string,str(current_buffer_output), re.MULTILINE) #re.DOTALL
@@ -105,7 +108,7 @@ class F250:
             
                 current_buffer=""
                 # avoids paramiko hang when recv is not ready yet
-                while time.time() < (base_time + timeout):
+                while time.time() < (base_time + timeout) and keep_running():
                     # Read some of the output
                     current_buffer =  self.port.read_until().decode('utf8')
                     if "\n" in current_buffer:
@@ -139,15 +142,17 @@ class F250:
 
             return (-1,"Not expected")
 
-    def read_response(self,timeout,store):
+    def read_response(self,timeout,store,keep_running):
         read_more=True
         while read_more:
-            index,match_string=self.expect()
+            index,match_string=self.expect(timeout,keep_running)
             match_string=str(match_string)
+            if not keep_running():
+                return False
             if index<0:
                 #print("expect timout?",command)
                # response["Timeout"]=index
-                return (-1,"Not expected")
+                return False
             m,action=expects[index]
             #print("-->\n","RESPONSE", index, action, m, match_string)
             if action == "error":
@@ -181,10 +186,10 @@ class F250:
                     store(d)
                 
 
-        return (-1,"Not expected")
+        return False
                 
         
-    def setup(self):
+    def setup(self,keep_running):
         """
         An, where n = 0, 1, 2, 3 or 4
         Parameters: n = 0 selects PRT A
@@ -207,7 +212,7 @@ class F250:
         """
 
         #verfiy contact
-        self.send_command_expect_response("?Z",["status"])
+        self.send_command_expect_response("?Z",["status"], timeout=60, keep_running=keep_running)
         # cleare Z ?
         #self.send_command("Z") #Toggles the Z function. dont use
         
@@ -245,7 +250,11 @@ class F250:
 if __name__ == "__main__":
     device= F250("COM3")
     device.connect()
-    device.setup()
+    keep_running_flag=True
+
+    def keep_running():
+        return keep_running_flag
+    device.setup(keep_running=keep_running)
     for x in range(100):
-        r=device.expect()
+        r=device.expect(timeout=60, keep_running=keep_running)
         #print(r)
