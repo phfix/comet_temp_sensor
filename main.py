@@ -201,8 +201,8 @@ class FileNameManager():
     
     def create_new_filename(self):
         ts= datetime.datetime.now()
-        #return f"C:/Users/Dammdata/Documents/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
-        return f"temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        return f"C:/Users/Dammdata/Documents/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        #return f"temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
 
     def set_new_filename(self,name):
         self.cond.acquire()
