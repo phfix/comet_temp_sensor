@@ -91,22 +91,37 @@ def create_temperature_reading(conn, args):
     conn.commit()
     return cur.lastrowid
 
-
-def measure_temp(keep_running,filename_manager,sensors,delta_time):
+def measure_temp_inner(keep_running,filename_manager,sensors,delta_time):
     current_file_name=filename_manager.get_filename()
-    db = open_db(current_file_name)
     try:
         sensors.open()
     except socket.error as e:
-        print("Sensor communication error: ", e, sensors.ip)
-    else:
-        pass
-
-    while keep_running():
+        print("Sensor communication error -open: ", e)
+        return
+    except socket.timeout as e:
+        print("Sensor timeout error: ", e)
+        return
+    except Exception as e:
+        print("Exception",e)
+   
+    read_data=True
+    db = open_db(current_file_name)
+    while read_data and keep_running():
         try:
             r = sensors.getSelectedData([0, 1,2,3])
         except socket.error as e:
-            print("Sensor communication error: ", e, sensors.ip)
+            print("Sensor communication error get data: ", e)
+            read_data=False
+            break
+        except socket.timeout as e:
+            print("Sensor timeout error: ", e)
+            read_data=False
+            break
+        except Exception as e:
+            print("Exception",e)
+            read_data=False
+            break
+
         else:
             for d in r:
                 if d["errorcode"] != 0:
@@ -119,8 +134,20 @@ def measure_temp(keep_running,filename_manager,sensors,delta_time):
             if new_filename is not None:
                 db = open_db(new_filename)
                 current_file_name=new_filename
-    sensors.close()
     db.close()
+    sensors.close()
+
+def measure_temp(keep_running,filename_manager,sensors,delta_time):
+    while keep_running():
+        try:
+            measure_temp_inner(keep_running,filename_manager,sensors,delta_time)
+        except Exception as e:
+            print("Exception:",e)
+        finally:
+            print("Wait before retry..")
+            time.sleep(10)
+            print("Retry")
+        
     thread=threading.current_thread()
     print(f"Exit thread: {thread.name}")
 
@@ -278,18 +305,24 @@ if __name__ == '__main__':
     t2.daemon=True # Stop this thread if main exits
     t3=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.0.250', ["S4", "S5", "S6", "S7"]),2], name="w741.250")
     t3.daemon=True # Stop this thread if main exits
+    t4=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.0.252', ["S8", "S9", "S10", "S11"]),2], name="w741.252")
+    t4.daemon=True # Stop this thread if main exits
 
     # start the threads
-    t1.start()
+    #t1.start() F250 precision temperture device connected to COM3. Not available 
     t2.start()
     t3.start()
+    t4.start()
 
     def new_database():
         make_database(file_name_manager)
 
     # use main thread to trigg new databases
-    #schedule.every().day.at("00:00").do(new_database)
-    schedule.every(2).minutes.do(new_database)
+    schedule.every().day.at("00:00").do(new_database)
+    schedule.every().day.at("06:00").do(new_database)
+    schedule.every().day.at("12:00").do(new_database)
+    schedule.every().day.at("18:00").do(new_database)
+    #schedule.every(60).minutes.do(new_database)
     try:
         while True:
             delay = schedule.idle_seconds()
@@ -303,7 +336,6 @@ if __name__ == '__main__':
         print ("keyboard interupt")
     except Exception as e: 
         print("Exception:", e)
-        pass
     finally:
         print(f"Stopping threads (wait {max_timeout+1} seconds to allow all threads to exit")
         keep_running_flag=False
