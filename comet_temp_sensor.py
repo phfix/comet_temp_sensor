@@ -67,7 +67,7 @@ def getErrorMessage(code):
 class Sensor:
     def __init__(self, ip=TCP_IP, names=[]):
         self.ip = ip
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+     
         self.registers = {
             0x9C27:  "internal acoustic signalisation",
             0x9C28:  "optical LED signalisation",
@@ -85,6 +85,7 @@ class Sensor:
         self.name = name
 
     def open(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.ip, TCP_PORT))
         snr = self.getSerialNumber()
         typename= self.get_type_name()
