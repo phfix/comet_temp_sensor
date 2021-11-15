@@ -124,14 +124,16 @@ def measure_temp_inner(keep_running,filename_manager,sensors,delta_time):
 
         else:
             for d in r:
-                if d["errorcode"] != 0:
-                    print("temp reading error:",
-                        sensors.get_error_message(d["errorcode"]))
+                #print("temp reading error:", sensors.get_error_message(d["errorcode"]))
                 create_temperature_reading(
                     db, [d["name"], d["valuef"], d["errorcode"]])
-                print(d["name"],d["valuef"])
+                if d["errorcode"] != 0:
+                    print(f'{d["name"] } ** ERROR ** {d["errorcode"]}' )
+                else:
+                    print(f'{d["name"]} {d["valuef"]:.3f}')
             new_filename=filename_manager.wait_for_new_filename(current_file_name,delta_time)
             if new_filename is not None:
+                #db.close()?
                 db = open_db(new_filename)
                 current_file_name=new_filename
     db.close()
@@ -152,27 +154,31 @@ def measure_temp(keep_running,filename_manager,sensors,delta_time):
     print(f"Exit thread: {thread.name}")
 
 
-def measure_ref_temp(keep_running,file_name_manager):
+def measure_ref_temp(keep_running,file_name_manager,delta_time):
     current_file_name= file_name_manager.get_filename()
     db=open_db(current_file_name)
   
 
-    def save_temp(d):
-        create_temperature_reading(db, [d["name"], d["valuef"], d["errorcode"]])
-        
+      
     
-    device= F250("COM3")
+    device= F250("COM8") # Input! COMX where X is integer. May occassionally need to be changed to successfully connect. Previous values: COM3, COM4, COM8.
     device.connect()
     device.setup(keep_running)
+    #print("Start processs f250")
     while keep_running():
         # new database?
-        new_filename=file_name_manager.is_new_filename(current_file_name)
+        new_filename=file_name_manager.wait_for_new_filename(current_file_name,delta_time)
         if new_filename is not None:
-            db.close()
+            #db.close()
             db=open_db(new_filename)
             current_file_name=new_filename
-        device.read_response(max_timeout,save_temp,keep_running)
-        #print(r)
+        #print("read response f250")
+        d=device.read_response(max_timeout,keep_running)
+        if d is not None:
+            create_temperature_reading(db, [d["name"], d["valuef"], d["errorcode"]])
+        else:
+            print("F250 no data")
+        #print(r) #printout
     device.disconnect()
     db.close()
     thread=threading.current_thread()
@@ -228,7 +234,8 @@ class FileNameManager():
     
     def create_new_filename(self):
         ts= datetime.datetime.now()
-        return f"C:/Users/Dammdata/Documents/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        return f"C:/Users/Dammdata/Documents/tempkalibrering/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        #return f"C:/Users/Dammdata/Documents/8_slot_data/temperatur/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
         #return f"temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
 
     def set_new_filename(self,name):
@@ -294,33 +301,45 @@ if __name__ == '__main__':
     def keep_running():
         return keep_running_flag
    
-
+    threadlist=[]
     # prepare one thread for each device
-    t1=threading.Thread( target=measure_ref_temp, args=[keep_running,file_name_manager], name="FK250")
-    #t1=threading.Thread( target=measure_dummy, args=[keep_running,file_name_manager], name="dummy FK250")
+    t=threading.Thread( target=measure_ref_temp, args=[keep_running,file_name_manager,2], name="FK250")
+#    t1=threading.Thread( target=measure_dummy, args=[keep_running,file_name_manager], name="dummy FK250")
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
 
-    t1.daemon=True # Stop this thread if main exits
-    t2=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.0.49', ["S0", "S1", "S2", "S3"]),2], name="w741.49")
+    t=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.25.22', ["Slot1T", "Slot1B", "Slot2T", "Slot2B"]),10], name="W0741_20280027")
     #t2=threading.Thread(target=measure_dummy2, args=[keep_running,file_name_manager,Sensor('192.168.0.49', ["S0", "S1", "S2", "S3"]),2], name="w741.49")
-    t2.daemon=True # Stop this thread if main exits
-    t3=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.0.250', ["S4", "S5", "S6", "S7"]),2], name="w741.250")
-    t3.daemon=True # Stop this thread if main exits
-    t4=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.0.252', ["S8", "S9", "S10", "S11"]),2], name="w741.252")
-    t4.daemon=True # Stop this thread if main exits
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
+
+    t=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.25.20', ["Slot3T", "Slot3B", "Slot4T", "Slot4B"]),10], name="W0741_20280028")
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
+
+    t=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.25.21', ["Slot5T", "Slot5B", "Slot6T", "Slot6B"]),10], name="W0741_20280029")
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
+
+    t=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.25.23', ["Slot7T", "Slot7B", "Slot8T", "Slot8B"]),10], name="W0741_21280122")
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
+
+    t=threading.Thread(target=measure_temp, args=[keep_running,file_name_manager,Sensor('192.168.25.24', ["Slot9T", "Slot9B", "Temp1", "Temp2"]),10], name="W0741_21280123")
+    t.daemon=True # Stop this thread if main exits
+    threadlist.append(t)
 
     # start the threads
-    #t1.start() F250 precision temperture device connected to COM3. Not available 
-    t2.start()
-    t3.start()
-    t4.start()
+    for x in threadlist:
+        x.start()
 
     def new_database():
         make_database(file_name_manager)
 
     # use main thread to trigg new databases
-    schedule.every().day.at("00:00").do(new_database)
+    #schedule.every().day.at("00:00").do(new_database)
     schedule.every().day.at("06:00").do(new_database)
-    schedule.every().day.at("12:00").do(new_database)
+    #schedule.every().day.at("12:00").do(new_database)
     schedule.every().day.at("18:00").do(new_database)
     #schedule.every(60).minutes.do(new_database)
     try:
@@ -339,7 +358,9 @@ if __name__ == '__main__':
     finally:
         print(f"Stopping threads (wait {max_timeout+1} seconds to allow all threads to exit")
         keep_running_flag=False
-        time.sleep(max_timeout+1)
+        #time.sleep(max_timeout+1)
+        for x in threadlist:
+            x.join()
 
     print("Program exit")
     exit()

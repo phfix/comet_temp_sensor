@@ -32,7 +32,7 @@ class F250:
         """
         if portname is not None:
             self.portname=portname
-        self.port=serial.Serial(port=self.portname, baudrate=19200, timeout=10,parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO, bytesize=serial.EIGHTBITS)
+        self.port=serial.Serial(port=self.portname, baudrate=19200, timeout=1,parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO, bytesize=serial.EIGHTBITS)
         pass
 
     def disconnect(self):
@@ -45,6 +45,7 @@ class F250:
             followed by up to 2 single digit parameters, with the exception of the switchbox commands which have 2
             alphabetical characters followed by 2 digits. 
         """
+        print("F250: send= ",command)
         self.port.write((command+"\n").encode("utf8"))
         
     def send_command_expect_response(self,command,responses, timeout, keep_running):
@@ -142,17 +143,18 @@ class F250:
 
             return (-1,"Not expected")
 
-    def read_response(self,timeout,store,keep_running):
+    def read_response(self,timeout,keep_running):
         read_more=True
         while read_more:
+            #print("F250 wait for data timeout=", timeout)
             index,match_string=self.expect(timeout,keep_running)
             match_string=str(match_string)
             if not keep_running():
-                return False
+                return None
             if index<0:
-                #print("expect timout?",command)
+                print("expect timout?")
                # response["Timeout"]=index
-                return False
+                return None
             m,action=expects[index]
             #print("-->\n","RESPONSE", index, action, m, match_string)
             if action == "error":
@@ -183,10 +185,11 @@ class F250:
                     d["name"]="FK250/" + input
                     d["valuef"]=temp
                     d["errorcode"]=""
-                    store(d)
+                    #store(d)
+                    return d
                 
 
-        return False
+        return None
                 
         
     def setup(self,keep_running):
@@ -248,7 +251,7 @@ class F250:
 
 
 if __name__ == "__main__":
-    device= F250("COM3")
+    device= F250("COM8")
     device.connect()
     keep_running_flag=True
 
