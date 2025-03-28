@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from sqlite3 import Error
 from comet_temp_sensor import Sensor
@@ -47,8 +48,6 @@ def create_table(conn, create_table_sql):
 
 
 def open_db(database_path):
-    #database = "C:/Users/Dammdata/Documents/temperature_cal.db"
-    # C:\Users\Dammdata\Documents\LSDATA
     database= database_path
 
     sql_create_temperarure_table = """ CREATE TABLE IF NOT EXISTS temperature_readings (
@@ -162,7 +161,9 @@ def measure_ref_temp(keep_running,file_name_manager,delta_time):
       
     
     device= F250("COM8") # Input! COMX where X is integer. May occassionally need to be changed to successfully connect. Previous values: COM3, COM4, COM8.
-    device.connect()
+    if not device.connect():
+        print("F250 connection error - do not collect reference temperature data")
+        return
     device.setup(keep_running)
     #print("Start processs f250")
     while keep_running():
@@ -229,14 +230,14 @@ def measure_dummy2(keep_running,filename_manager,sensors,delta_time):
 
 
 class FileNameManager():
-    def __init__(self):
+    def __init__(self,datadir):
         self.cond=cond = threading.Condition()
+        self.datadir=datadir
     
     def create_new_filename(self):
         ts= datetime.datetime.now()
-        return f"C:/Users/Dammdata/Documents/tempkalibrering/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
-        #return f"C:/Users/Dammdata/Documents/8_slot_data/temperatur/temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
-        #return f"temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        filename= f"temperature_{ts.year:4d}{ts.month:02d}{ts.day:02d}_{ ts.hour:02d}{ts.minute:02d}{ts.second:02d}.db"
+        return os.path.join(self.datadir,filename)
 
     def set_new_filename(self,name):
         self.cond.acquire()
@@ -293,8 +294,11 @@ def make_database(file_name_manager):
 
 
 if __name__ == '__main__':
+    datadir="temperature_data"
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
     # maka a new database if it it a new day...
-    file_name_manager=FileNameManager()
+    file_name_manager=FileNameManager(datadir)
     make_database(file_name_manager)
     keep_running_flag=True
 
@@ -367,4 +371,4 @@ if __name__ == '__main__':
 
 
 
-    #measure_temp(5)
+

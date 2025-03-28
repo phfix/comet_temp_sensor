@@ -1,6 +1,6 @@
 
 
-import pytest
+# Test the comet_temp_sensor module
 import socket
 from comet_temp_sensor import Sensor
 

@@ -21,8 +21,9 @@ class F250:
         self.re_strings=[]
         for e in expects:
             self.re_strings.append(e[0])
+        self.port=None
 
-    def connect(self,portname=None):
+    def connect(self,portname=None) -> bool:
         """
             As supplied by the factory, unless requested otherwise, the RS232C interface is configured as follows:
             19,200 Baud
@@ -32,11 +33,19 @@ class F250:
         """
         if portname is not None:
             self.portname=portname
-        self.port=serial.Serial(port=self.portname, baudrate=19200, timeout=1,parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO, bytesize=serial.EIGHTBITS)
-        pass
+        try:
+            self.port=serial.Serial(port=self.portname, baudrate=19200, timeout=1,parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_TWO, bytesize=serial.EIGHTBITS)
+        except serial.SerialException as e:
+            print("Error: ",e)
+            print("Could not open port: ",self.portname)
+            print("F250 not connected")
+            return False
+        return True
+        
 
     def disconnect(self):
-        self.port.close()
+        if self.port is not None:
+            self.port.close()
 
     def send_command(self,command):
         """ All commansds must be delimited with a line feed character (ASCII 0AH), that is the last character of a
@@ -46,7 +55,9 @@ class F250:
             alphabetical characters followed by 2 digits. 
         """
         print("F250: send= ",command)
-        self.port.write((command+"\n").encode("utf8"))
+        if self.port is not None:
+            self.port.write((command+"\n").encode("utf8"))
+        
         
     def send_command_expect_response(self,command,responses, timeout, keep_running):
 
@@ -80,6 +91,9 @@ class F250:
         return self.port.read_until() #expected=LF
 
     def expect( self, timeout,keep_running ):
+            if self.port is None:
+                return (-1,"Not expected")
+            
             current_buffer_output = self.current_output
             # This function needs all regular expressions to be in the form of a
             # list, so if the user provided a string, let's convert it to a 1
